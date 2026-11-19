@@ -618,11 +618,27 @@ li.parts-empty { color: var(--ink-3); font-size: 15px; padding: 6px 4px; }
   add('implies|therefore|اذن|يؤدي الى', T('op', '\\Rightarrow'));
 
   // greek
+  // every greek letter with the ways speech recognisers mishear it (Arabic and English)
   const greek = {
-    alpha: 'الفا', beta: 'بيتا', gamma: 'جاما|غاما|قاما', delta: 'دلتا', epsilon: 'ابسلون|ابسيلون|epsilon',
-    theta: 'ثيتا|ثيتا', lambda: 'لامدا|لمدا|لامبدا', mu: 'ميو|مو|myu|mew|mu|meu', pi: 'باي|pie|pi',
-    sigma: 'سيجما|سيغما', omega: 'اوميجا|اوميغا|اوميقا', phi: 'فاي|fai|phi', tau: 'تاو|tau|tao', rho: 'رو|rho',
-    eta: 'ايتا', psi: 'ساي|psi', zeta: 'زيتا', kappa: 'كابا', chi: 'كاي'
+    alpha: 'الفا|الفه|الفي|alfa|alpa',
+    beta: 'بيتا|بيته|بيطا|bita|bayta',
+    gamma: 'جاما|غاما|قاما|كاما|جما|غما|قما|gama',
+    delta: 'دلتا|دلطا|دلته|ديلتا|دالتا|delt',
+    epsilon: 'ابسلون|ابسيلون|ابسالون|ابسلن|ابسيلن|epsilon|ipsilon|epsalon',
+    theta: 'ثيتا|ثيته|فيتا|فيته|سيتا|سيته|تيتا|تيته|ثيطا|ثتا|feta|teta|tita|thita|seta',
+    lambda: 'لامدا|لمدا|لامبدا|لمبدا|لامبادا|لمده|لامده|lamda|lamba|lambada',
+    mu: 'ميو|مو|ميوو|mew|mu|meu|myu|mio',
+    pi: 'باي|pie|pi|pye',
+    sigma: 'سيجما|سيغما|سيقما|سجما|سغما|سقما|سيكما|sigmah',
+    omega: 'اوميجا|اوميغا|اوميقا|اوميكا|اومقا|اومغا|اومجا|اوميغه|اوميجه|اوميقه|اوميكه|omiga|omeja',
+    phi: 'فاي|فايي|fai|phi|phy',
+    tau: 'تاو|طاو|tau|tao|taw',
+    rho: 'رو|روه|rho|roh',
+    eta: 'ايتا|ايته|eta|ita',
+    psi: 'ساي|بساي|psi|psy|sai',
+    zeta: 'زيتا|زيته|zeta|zita',
+    kappa: 'كابا|كبا|كاپا|kappa|kapa',
+    chi: 'كاي|خاي|chi|kai'
   };
   Object.keys(greek).forEach(g => {
     add(g + '|' + greek[g], T('atom', '\\' + g));
@@ -672,8 +688,8 @@ li.parts-empty { color: var(--ink-3); font-size: 15px; padding: 6px 4px; }
   // latin letter names (Arabic spellings)
   // Arabic letter names map to the case engineers usually mean (V, I, R, C, L are capitals)
   const letters = {
-    a: 'ايه', b: 'بي', C: 'سي', e: 'e', f: 'اف', g: 'g', h: 'اتش', I: 'اي', k: 'كيه|كي', L: 'ال ال|ايل',
-    m: 'ام', n: 'n|en', P: 'بيه', Q: 'كيو', R: 'ار', s: 'اس اس', t: 'تي', u: 'يو', V: 'vee', w: 'دبليو', x: 'اكس|ex|eks', y: 'واي|why', z: 'زد|zed|زي'
+    a: 'ايه', b: 'بي', C: 'سي', e: 'e', f: 'اف', g: 'g', h: 'اتش', I: 'اي', k: 'كيه|كي', L: 'ال ال|ايل|ال|ايلل',
+    m: 'ام', n: 'n|en', P: 'بيه', Q: 'كيو', R: 'ار', s: 'اس اس', t: 'تي', u: 'يو', V: 'vee', w: 'دبليو', x: 'اكس|ex|eks', y: 'واي|why', Z: 'زد|zed|زي|زيد'
   };
   Object.keys(letters).forEach(L0 => {
     const l = L0.toLowerCase();
