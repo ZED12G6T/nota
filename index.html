@@ -511,7 +511,8 @@ li.parts-empty { color: var(--ink-3); font-size: 15px; padding: 6px 4px; }
   <h4>المساعد الذكي</h4>
   <label class="check"><span>يفهم قصدك ويبني المعادلات</span><input type="checkbox" id="opt-ai" checked></label>
   <p class="ai-note" id="ai-note"></p>
-  <div class="duo"><button type="button" class="soft" id="ai-allow" hidden>اسمح للمساعد الحين</button></div>
+  <div class="duo"><button type="button" class="soft" id="ai-allow" hidden>اسمح للمساعد الحين</button><button type="button" class="soft" id="ai-test" hidden>افحص المساعد</button></div>
+  <p class="ai-note" id="ai-test-out" hidden></p>
 </div>
 <div class="pop" id="pop-parts" hidden>
   <h3>مشاركات الطلاب <small id="parts-total"></small></h3>
@@ -2255,10 +2256,22 @@ function thinkThen(fn) { setEmotion('thinking', 2000); setTimeout(fn, reduced ? 
    asks for it («نوتا سو معادلة …», «نوتا صحح المعادلة»), or when «نوتا معادلة …» has words the dictionary does not know.
    Claude answers with a small JSON plan that can only do what Nota already does: write an equation, fix the last one,
    or run one of Nota's own commands (never «امسح الكل» or «محاضرة جديدة»). Everything it does can be undone. */
-const AI = { sample: null, perms: null, state: 'none', queue: Promise.resolve(), waiting: 0, told: false };
+const AI = { sample: null, perms: null, state: 'none', queue: Promise.resolve(), waiting: 0, told: false, tiers: null, last: '' };
 // state: 'none' (no Claude in this page, e.g. the GitHub site) | 'prompt' (asks once) | 'granted' | 'denied'
 function aiReady() { return opts.ai && typeof AI.sample === 'function' && AI.state !== 'denied'; }
-function aiCall(prompt) { return AI.sample.json(prompt, { modelTier: 'quick', cache: false }); }
+async function aiCall(prompt) {
+  const o = { cache: false };
+  if (!AI.tiers || AI.tiers.includes('quick')) o.modelTier = 'quick';
+  if (typeof AI.sample.json === 'function') return AI.sample.json(prompt, o);
+  const r = await AI.sample(prompt, o);   // older viewer apps: plain text, parsed here
+  return aiParse(r && r.text);
+}
+function aiParse(t) {
+  t = String(t || '');
+  const f = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (f) t = f[1];
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  try { return JSON.parse(a >= 0 && b > a ? t.slice(a, b + 1) : t); } catch (e) { throw { code: 'invalid_json', message: 'no JSON', text: t }; }
+}
 
 const AI_RULES = [
   'You are the assistant inside Nota, a live lecture board. A university lecturer (usually electrical engineering, physics or math) speaks Saudi Arabic and/or English. A speech recognizer writes down what they say and often mishears math words. They addressed you by saying «نوتا». Work out what they meant and reply with ONLY one JSON object, no other text.',
@@ -2319,11 +2332,15 @@ function aiSay(out) { return out && typeof out.say === 'string' ? out.say.replac
 const AI_RISKY = /^(امسح\s*الكل|امسح\s*كل|امسح\s*السبوره|امسح\s*الشاشه|clear\s*all|محاضره\s*جديده|new\s*lecture)/i;
 /* carries out Claude's plan; 'done' | 'none' (Claude could not tell) | 'bad' (nothing usable came back) */
 function aiApply(out, job) {
-  const list = Array.isArray(out) ? out : out && Array.isArray(out.actions) ? out.actions : out && out.do ? [out] : [];
+  if (typeof out === 'string') { try { out = aiParse(out); } catch (e) { out = null; } }
+  const one = o => o && (o.do || o.action || o.type || o.tex || o.latex || o.command);
+  const list = Array.isArray(out) ? out : out && Array.isArray(out.actions) ? out.actions : one(out) ? [out] : [];
   const say = aiSay(out);
   let wrote = 0, ran = 0, none = false;
   for (const a of list.filter(a => a && typeof a === 'object').slice(0, 3)) {
-    let d = String(a.do || '').toLowerCase();
+    let d = String(a.do || a.action || a.type || (a.command ? 'command' : a.tex || a.latex ? 'math' : '')).toLowerCase();
+    if (d === 'equation' || d === 'latex') d = 'math';
+    if (a.latex && !a.tex) a.tex = a.latex;
     if (job.kind === 'fix' && d === 'math') d = 'fix';
     if (d === 'math' || (d === 'fix' && lastMathIndex() < 0)) {
       const tex = aiTex(a.tex); if (!tex) continue;
@@ -2360,7 +2377,7 @@ async function aiRun(job) {
     if (AI.state === 'prompt') { AI.state = 'granted'; paintAI(); }
     const res = aiApply(out, job);
     if (res === 'none') { if (job.kind === 'repair' && job.fallback) job.fallback(); else setEmotion('confused', 2600, aiSay(out) || 'ما فهمت قصدك، قلها بطريقة ثانية'); }
-    else if (res === 'bad') aiFallback(job, 'ما قدرت أفهمها');
+    else if (res === 'bad') { AI.last = 'bad answer: ' + JSON.stringify(out).slice(0, 120); try { console.warn('[nota] assistant', AI.last); } catch (x) {} aiFallback(job, 'رد المساعد ما كان واضح'); }
   } catch (e) {
     aiError(e, job);
   } finally {
@@ -2373,14 +2390,16 @@ function aiFallback(job, why) {
   if (job.fallback) job.fallback(); else setEmotion('confused', 2400, why || 'ما قدرت');
 }
 function aiError(e, job) {
-  const code = e && e.code;
+  const code = (e && e.code) || (e && e.name) || 'error';
+  AI.last = code + (e && e.message ? ': ' + String(e.message).slice(0, 80) : '');
+  try { console.warn('[nota] assistant', AI.last); } catch (x) {}
   if (code === 'cancelled') return;
   if (code === 'not_granted' || code === 'sampling_disabled' || code === 'not_declared' || code === 'capability_disabled' || code === 'capability_removed') {
     AI.state = 'denied'; paintAI();
     aiFallback(job, code === 'not_granted' ? 'ما سمحت للمساعد، فاستخدمت القاموس' : 'المساعد مو متاح هنا، فاستخدمت القاموس');
     return;
   }
-  aiFallback(job, code === 'rate_limited' ? 'المساعد مشغول الحين، جرّب بعد شوي' : 'ما قدرت أوصل للمساعد');
+  aiFallback(job, code === 'rate_limited' ? 'المساعد مشغول الحين، جرّب بعد شوي' : 'ما قدرت أوصل للمساعد (' + code + ')');
 }
 /* no assistant here (the GitHub site, or switched off): do the best Nota can on its own, and say why once */
 function aiOff(job) {
@@ -2418,12 +2437,28 @@ function paintAI() {
   else if (AI.state === 'granted') t = 'جاهز. قل «نوتا سو معادلة …» أو «نوتا صحح المعادلة».';
   else { t = 'أول مرة بيطلب إذن Claude. اسمح له الحين عشان ما يطلع السؤال وسط المحاضرة.'; b = AI.perms ? 'اسمح للمساعد الحين' : ''; }
   note.textContent = t; btn.textContent = b; btn.hidden = !b;
+  $('#ai-test').hidden = !(opts.ai && typeof AI.sample === 'function');
   $('#ai-help-where').textContent = typeof AI.sample === 'function' ? '' : 'في رابط Claude';
 }
 function aiPermState() {
   if (!AI.perms || typeof AI.sample !== 'function') { paintAI(); return; }
   AI.perms.state('sample').then(s => { if (s === 'granted' || s === 'denied') AI.state = s; else if (AI.state === 'none') AI.state = 'prompt'; paintAI(); }).catch(() => paintAI());
 }
+/* «افحص المساعد»: one small call, and the answer or the exact error on screen */
+$('#ai-test').addEventListener('click', async () => {
+  const out = $('#ai-test-out'), t0 = performance.now();
+  out.hidden = false; out.textContent = 'أفحص…';
+  try {
+    const r = await aiCall('Reply with only this JSON object and nothing else: {"actions":[{"do":"math","tex":"V = I R"}],"say":"شغال"}');
+    const ok = r && Array.isArray(r.actions) && r.actions[0] && r.actions[0].tex;
+    if (AI.state === 'prompt') { AI.state = 'granted'; paintAI(); }
+    out.textContent = (ok ? 'شغال ✓ ' : 'وصل رد غريب: ' + JSON.stringify(r).slice(0, 80) + ' ') + '(' + ((performance.now() - t0) / 1000).toFixed(1) + ' ث)';
+  } catch (e) {
+    out.textContent = 'ما اشتغل: ' + ((e && e.code) || (e && e.name) || 'error') + (e && e.message ? ' · ' + String(e.message).slice(0, 90) : '');
+    if (e && (e.code === 'not_granted' || e.code === 'sampling_disabled')) { AI.state = 'denied'; paintAI(); }
+  }
+  if (AI.last) out.textContent += ' · آخر خطأ: ' + AI.last;
+});
 $('#opt-ai').addEventListener('change', e => { opts.ai = e.target.checked; saveSettings(); paintAI(); });
 $('#ai-allow').addEventListener('click', () => {
   if (!AI.perms) return;
@@ -2930,7 +2965,7 @@ if (window.claude && typeof window.claude.use === 'function') {
     } else if (!SR) { mic.disabled = true; micLabel.textContent = 'الكلام غير متاح هنا. اكتب تحت'; }
   }).catch(() => {});
   window.claude.use('downloads').then(d => { downloads = d; }).catch(() => {});
-  window.claude.use('sample').then(s => { if (typeof s === 'function') { AI.sample = s; AI.state = 'prompt'; } aiPermState(); }).catch(() => {});
+  window.claude.use('sample').then(s => { if (typeof s === 'function') { AI.sample = s; AI.state = 'prompt'; if (typeof s.limits === 'function') s.limits().then(l => { AI.tiers = l && Array.isArray(l.modelTiers) ? l.modelTiers : null; }).catch(() => {}); } aiPermState(); }).catch(() => {});
   window.claude.use('permissions').then(p => { AI.perms = p || null; aiPermState(); }).catch(() => {});
 } else if (!SR) {
   mic.disabled = true; micLabel.textContent = 'المتصفح ما يدعم الكلام. استخدم Chrome';
