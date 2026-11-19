@@ -226,6 +226,16 @@ textarea.edit-in { display: block; width: min(860px, 72vw); margin: 0 auto; text
 .wave b { width: 3px; border-radius: 3px; background: linear-gradient(var(--accent-2), var(--accent)); height: 6px; animation: wave 1s ease-in-out infinite; }
 .wave b:nth-child(2) { animation-delay: .15s; } .wave b:nth-child(3) { animation-delay: .3s; } .wave b:nth-child(4) { animation-delay: .45s; }
 @keyframes wave { 50% { height: 18px; } }
+/* the assistant is working: same slot, a shimmering line instead of the words */
+.live.ai .live-slot { height: 3.3em; }
+.live .ai-wait { position: absolute; left: 0; right: 0; top: 0; height: 2em; display: flex; justify-content: center; align-items: center; gap: 10px; font-family: var(--ui-en), var(--ui-ar), serif; font-size: .8em; opacity: 0; transition: opacity .35s; pointer-events: none; }
+.live.ai .ai-wait { opacity: 1; }
+.live.ai .hint { opacity: 0; }
+.ai-wait svg { width: 1.05em; height: 1.05em; flex: none; fill: url(#ai-grad); filter: drop-shadow(0 0 6px var(--glow)); animation: aispin 2.4s var(--ease) infinite; }
+.ai-wait span { background: linear-gradient(90deg, var(--ink-3) 0%, var(--ink-3) 35%, var(--accent) 50%, var(--ink-3) 65%, var(--ink-3) 100%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: aishine 1.8s linear infinite; }
+@keyframes aispin { 50% { transform: rotate(90deg) scale(1.15); } 100% { transform: rotate(180deg); } }
+@keyframes aishine { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+.said .ai-mark { font-style: normal; color: var(--accent); margin-inline-end: .3em; }
 
 /* ---------- bottom: typing, mic, status ---------- */
 .bottom { position: relative; z-index: 5; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 22px; padding: 6px 26px 22px; }
@@ -336,6 +346,8 @@ kbd { font-family: var(--ui-en), serif; font-size: 12.5px; padding: 1px 7px; bor
 .parts button:hover { color: var(--ink); }
 li.parts-empty { color: var(--ink-3); font-size: 15px; padding: 6px 4px; }
 .parts-tip { color: var(--ink-3); font-size: 13.5px; margin: 10px 2px 0; line-height: 1.6; }
+.ai-note { color: var(--ink-3); font-size: 13.5px; margin: 6px 2px 8px; line-height: 1.6; }
+.ai-note b { color: var(--ink-2); font-weight: 600; }
 .soft { flex: 1; border: 0; border-radius: 999px; padding: 8px 12px; background: var(--surface-2); box-shadow: var(--sh-1); color: var(--ink-2); font-size: 15px; }
 .soft:hover { color: var(--ink); }
 
@@ -426,7 +438,7 @@ li.parts-empty { color: var(--ink-3); font-size: 15px; padding: 6px 4px; }
     <div class="stream" id="stream" tabindex="-1">
       <div class="halo" id="halo" aria-hidden="true"></div>
       <div class="lines" id="lines" aria-live="polite"></div>
-      <div class="live" id="live"><div class="live-slot"><div id="live-words"></div><div class="hint" aria-hidden="true"><i class="wave"><b></b><b></b><b></b><b></b></i>أسمعك… تكلّم وأنا أكتب</div></div></div>
+      <div class="live" id="live"><div class="live-slot"><div id="live-words"></div><div class="hint" aria-hidden="true"><i class="wave"><b></b><b></b><b></b><b></b></i>أسمعك… تكلّم وأنا أكتب</div><div class="ai-wait" aria-live="polite"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="ai-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent-2)"/><stop offset="1" style="stop-color:var(--accent)"/></linearGradient></defs><path d="M12 1.5c.7 5.6 4.9 9.8 10.5 10.5-5.6.7-9.8 4.9-10.5 10.5C11.3 16.9 7.1 12.7 1.5 12 7.1 11.3 11.3 7.1 12 1.5z"/></svg><span id="ai-wait-t">أبني المعادلة…</span></div></div></div>
     </div>
   </main>
 
@@ -495,6 +507,11 @@ li.parts-empty { color: var(--ink-3); font-size: 15px; padding: 6px 4px; }
   <label class="check"><span>عيونه تلحق المؤشر</span><input type="checkbox" id="opt-follow" checked></label>
   <label class="check"><span>يحوّل المعادلات تلقائيًا</span><input type="checkbox" id="opt-math" checked></label>
   <label class="check"><span>مجسم ثلاثي الأبعاد</span><input type="checkbox" id="opt-3d" checked></label>
+  <div class="sep"></div>
+  <h4>المساعد الذكي</h4>
+  <label class="check"><span>يفهم قصدك ويبني المعادلات</span><input type="checkbox" id="opt-ai" checked></label>
+  <p class="ai-note" id="ai-note"></p>
+  <div class="duo"><button type="button" class="soft" id="ai-allow" hidden>اسمح للمساعد الحين</button></div>
 </div>
 <div class="pop" id="pop-parts" hidden>
   <h3>مشاركات الطلاب <small id="parts-total"></small></h3>
@@ -518,6 +535,9 @@ li.parts-empty { color: var(--ink-3); font-size: 15px; padding: 6px 4px; }
   <div class="sep"></div>
   <h3>أوامر نوتا</h3>
   <div id="commands"></div>
+  <div class="sep"></div>
+  <h3>المساعد الذكي <small id="ai-help-where"></small></h3>
+  <div id="ai-examples"></div>
 </div>
 
 <div class="narrow" id="narrow">
@@ -1059,7 +1079,7 @@ const EMO = {
   sleeping:  { ar: 'نايم',   line: 'قل «نوتا» أو اضغط المايك', w: .21, h: .3, top: .88, tilt: 0, bot: 0, dy: .05, col: '#4f8d9c', zz: 1 }
 };
 const EMO_ORDER = ['neutral', 'attentive', 'happy', 'excited', 'curious', 'thinking', 'confused', 'sad', 'angry', 'surprised', 'sleepy', 'sleeping'];
-const opts = { blink: true, follow: true, autoMath: true, use3d: true, fly: true };
+const opts = { blink: true, follow: true, autoMath: true, use3d: true, fly: true, ai: true };
 const orb = { base: 'neutral', cur: 'neutral', until: 0, pinned: null, line: '' };
 
 function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
@@ -1596,9 +1616,9 @@ const EN_FONTS = [
   { id: 'garamond', nm: 'EB Garamond', css: '"EB Garamond"', sample: "Ohm's law" },
   { id: 'georgia', nm: 'Georgia', css: 'Georgia, "Tinos"', sample: "Ohm's law" }
 ];
-const settings = Object.assign({ ar: 'amiri', head: 'amiri', en: 'tnr', size: 30, shadow: true, shadowA: 22, blink: true, follow: true, autoMath: true, use3d: true, fly: true }, store.get('settings') || {});
+const settings = Object.assign({ ar: 'amiri', head: 'amiri', en: 'tnr', size: 30, shadow: true, shadowA: 22, blink: true, follow: true, autoMath: true, use3d: true, fly: true, ai: true }, store.get('settings') || {});
 function saveSettings() {
-  Object.assign(settings, { blink: opts.blink, follow: opts.follow, autoMath: opts.autoMath, use3d: opts.use3d, fly: opts.fly });
+  Object.assign(settings, { blink: opts.blink, follow: opts.follow, autoMath: opts.autoMath, use3d: opts.use3d, fly: opts.fly, ai: opts.ai });
   store.set('settings', settings);
 }
 function fontChoices(box, list, key) {
@@ -1697,7 +1717,7 @@ function lineEl(l, isCur) {
   el.className = 'ln t-' + l.type + (isCur ? ' cur' : '');
   el.dataset.id = l.id;
   const body = document.createElement('div'); body.className = 'body' + (l.id === freshId ? ' enter' : '');
-  if (l.type === 'math') body.innerHTML = katexHTML(l.tex) + (l.src ? '<span class="said">«' + escapeHTML(l.src) + '»</span>' : '');
+  if (l.type === 'math') body.innerHTML = katexHTML(l.tex) + (l.src ? '<span class="said">' + (l.ai ? '<i class="ai-mark" title="كتبها المساعد">✦</i>' : '') + '«' + escapeHTML(l.src) + '»</span>' : '');
   else if (l.type === 'table') body.append(tableEl(l));
   else if (l.type !== 'divider') body.textContent = l.text;
   const acts = document.createElement('div'); acts.className = 'acts';
@@ -1913,7 +1933,7 @@ function measure() {
 /* where the listening slot ends; uses its final height, so the card does not chase the slot's animation */
 function liveBottom(lv) { return lv.offsetTop + liveSlotPx(lv); }
 function liveSlotPx(lv) { return 3.3 * (parseFloat(getComputedStyle(lv).fontSize) || 22); }
-function liveIsOn(lv) { return lv.classList.contains('on') || lv.classList.contains('listening'); }
+function liveIsOn(lv) { return lv.classList.contains('on') || lv.classList.contains('listening') || lv.classList.contains('ai'); }
 function placeHalo() {
   const halo = $('#halo'), cur = $('#lines .ln.cur');
   if (!cur) { halo.style.opacity = '0'; return; }
@@ -2129,8 +2149,13 @@ function newLecture() {
 
 /* ============================ Speech → lecture ============================ */
 const WAKE = /^(يا\s*)?(نوتا|نوته|نوطا|نوت|nota|notta|nouta|noda)(?=[\s،,.!؟?:]|$)[\s،,.!؟?:]*/i;
-let pendingHeading = false, pendingBullet = false, pendingMath = false, pendingTable = null, pendingRow = false, pendingPart = false;
+let pendingHeading = false, pendingBullet = false, pendingMath = false, pendingTable = null, pendingRow = false, pendingPart = false, pendingBuild = false;
 const CMDS = [
+  /* the assistant: «سو معادلة …», «قانون …», «صحح المعادلة» (ai: never started by the assistant itself) */
+  { ai: true, re: /^((?:سو|سوي|اعمل|ابني|ابن|ارسم|اكتب|حط|ضيف|اضف|ابي|ابغي|ابغا|ابغى|نبي|عطني|اعطني|هات|make|build|write|give\s*me|show\s*me)\s*(?:لي|لنا|me|us|an?|the)?\s*(?:معادله|المعادله|قانون|equation|formula|law)(?:\s+(?:حق|حقت|of|for)(?=\s))?)[\s,:]*(.*)$/i, run: m => buildEq(m[2]) },
+  { ai: true, re: /^(قانون|law\s*of|law)\s+(.+)$/i, run: m => buildEq(m[1] + ' ' + m[2]) },
+  { ai: true, re: /^((?:صحح|صلح|عدل|غير)\s*(?:اخر)?\s*(?:المعادله|معادله|equation|the\s*equation))[\s,:]*(.*)$/i, run: m => fixEq(m[2]) },
+  { ai: true, re: /^((?:صحح|صلح|correct|fix)(?:ها|it)?)(?=\s|$|[,:])[\s,:]*(.*)$/i, run: m => fixEq(m[2]) },
   { re: /^(امسح|احذف|شيل|ازل)\s*(اخر|آخر)?\s*(سطر|السطر)|^(delete|remove|erase)\s*(the\s*)?last\s*line/i, run: () => {
       const i = doc.lines.length - 1; if (i < 0) { setEmotion('confused', 1300, 'الشاشة فاضية أصلًا'); return; }
       snapshot(); adopt(); doc.lines.pop(); commit(); setEmotion('happy', 1200, 'مسحت آخر سطر'); followLatest(true); } },
@@ -2142,7 +2167,7 @@ const CMDS = [
   { re: /^(المشاركات|سجل\s*المشاركات|اعرض\s*المشاركات|افتح\s*المشاركات|مين\s*شارك)/i, run: () => openPopById('parts') },
   { re: /^(سجل\s*مشاركه|مشاركه|شاركت|شارك|participation|participated)(?=\s|$|[,:])\s*[,:]?\s*(.*)$/i, run: m => addPart(m[2]) },
   { re: /^(تراجع|رجع|undo)/i, run: () => undo() },
-  { re: /^(محاضره\s*جديده|محاضرة\s*جديدة|new\s*lecture)/i, run: () => newLecture() },
+  { risky: true, re: /^(محاضره\s*جديده|محاضرة\s*جديدة|new\s*lecture)/i, run: () => newLecture() },
   { re: /^(عنوان\s*جديد|عنوان|new\s*heading|heading|title)\s*(.*)$/i, run: m => {
       const t = (m[2] || '').trim();
       if (t) { addLine({ type: 'heading', text: t }); setEmotion('excited', 1100, 'عنوان جديد!'); }
@@ -2160,7 +2185,7 @@ const CMDS = [
   { re: /^(اطلع|فوق|اول المحاضره|scroll up|up|top)/i, run: () => { const f = $('#lines .ln'); if (f) focusLine(f); } },
   { re: /^(وقف|اوقف|توقف|خلاص|stop)/i, run: () => { stopListening(); setEmotion('happy', 1200, 'وقفت الاستماع'); } },
   { re: /^(صدر|تصدير|طلع|export)/i, run: () => exportPDF() },
-  { re: /^(امسح الكل|امسح كل شي|امسح السبوره|امسح الشاشه|clear all)/i, run: () => { snapshot(); doc.lines = []; commit(); setEmotion('surprised', 1200, 'مسحت كل شي. قل «تراجع» لو تبيه'); } },
+  { risky: true, re: /^(امسح الكل|امسح كل شي|امسح السبوره|امسح الشاشه|clear all)/i, run: () => { snapshot(); doc.lines = []; commit(); setEmotion('surprised', 1200, 'مسحت كل شي. قل «تراجع» لو تبيه'); } },
   { re: /^(شكرا|thank)/i, run: () => setEmotion('happy', 1800, 'العفو يا دكتور!') },
   { re: /^(نم|نام|sleep)/i, run: () => { lastActive = performance.now() - 60000; orb.until = 0; orb.cur = 'sleeping'; paintMood(); } },
   { re: /^(اصحى|اصح|wake)/i, run: () => setEmotion('excited', 1400, 'صاحي!') }
@@ -2176,17 +2201,12 @@ function handleUtterance(raw) {
     const rest = text.slice(textOffset(text, m[0].length)).trim();
     const restN = NotaMath.norm(rest);
     if (!restN) { setEmotion('excited', 1500, 'نعم يا دكتور؟'); return; }
-    for (const c of CMDS) {
-      const mm = restN.match(c.re);
-      if (mm) {
-        const tail = mm[mm.length - 1] || '';
-        if (mm.length > 2 && tail) mm[mm.length - 1] = rest.slice(textOffset(rest, restN.length - tail.length)).trim() || tail;
-        c.run(mm); return;
-      }
-    }
-    setEmotion('confused', 1800, 'ما فهمت الأمر: «' + rest.slice(0, 30) + '»');
+    if (runCommand(rest)) return;
+    const lost = () => setEmotion('confused', 1800, 'ما فهمت الأمر: «' + rest.slice(0, 30) + '»');
+    if (aiReady()) aiAsk({ kind: 'command', said: rest, fallback: lost }); else lost();
     return;
   }
+  if (pendingBuild) { pendingBuild = false; buildEq(text); return; }
   if (pendingTable) { const id = pendingTable; pendingTable = null; if (setTableHead(id, text)) return; }
   if (pendingRow) { pendingRow = false; addRow(text); return; }
   if (pendingPart) { pendingPart = false; addPart(text); return; }
@@ -2203,8 +2223,24 @@ function handleUtterance(raw) {
   addLine({ type: 'text', text });
   if (!orb.until) setEmotion(listening ? 'attentive' : 'happy', 700);
 }
-function addMath(text) {
+/* runs one of Nota's own commands; the assistant's answers come through here too (fromAI), minus the risky ones */
+function runCommand(rest, fromAI) {
+  const restN = NotaMath.norm(rest);
+  for (const c of CMDS) {
+    if (fromAI && (c.ai || c.risky)) continue;
+    const mm = restN.match(c.re);
+    if (mm) {
+      const tail = mm[mm.length - 1] || '';
+      if (mm.length > 2 && tail) mm[mm.length - 1] = rest.slice(textOffset(rest, restN.length - tail.length)).trim() || tail;
+      c.run(mm); return true;
+    }
+  }
+  return false;
+}
+function addMath(text, forced, noAI) {
   const r = NotaMath.toLatex(text);
+  // the word-by-word engine got stuck: let the assistant read it instead of writing a broken equation
+  if (!noAI && (!r.tex || r.words > r.atoms + r.structs) && aiReady()) { aiAsk({ kind: 'repair', said: text, dict: r.tex, fallback: () => addMath(text, forced, true) }); return; }
   thinkThen(() => {
     if (!r.tex) { setEmotion('confused', 1600, 'ما لقيت معادلة'); return; }
     addLine({ type: 'math', tex: r.tex, src: text });
@@ -2214,6 +2250,187 @@ function addMath(text) {
 }
 function thinkThen(fn) { setEmotion('thinking', 2000); setTimeout(fn, reduced ? 150 : 650); }
 
+/* ============================ Assistant: Claude works out what the doctor meant ============================
+   Only speech that starts with «نوتا» reaches it, and only when Nota's own commands found nothing, when the doctor
+   asks for it («نوتا سو معادلة …», «نوتا صحح المعادلة»), or when «نوتا معادلة …» has words the dictionary does not know.
+   Claude answers with a small JSON plan that can only do what Nota already does: write an equation, fix the last one,
+   or run one of Nota's own commands (never «امسح الكل» or «محاضرة جديدة»). Everything it does can be undone. */
+const AI = { sample: null, perms: null, state: 'none', queue: Promise.resolve(), waiting: 0, told: false };
+// state: 'none' (no Claude in this page, e.g. the GitHub site) | 'prompt' (asks once) | 'granted' | 'denied'
+function aiReady() { return opts.ai && typeof AI.sample === 'function' && AI.state !== 'denied'; }
+function aiCall(prompt) { return AI.sample.json(prompt, { modelTier: 'quick', cache: false }); }
+
+const AI_RULES = [
+  'You are the assistant inside Nota, a live lecture board. A university lecturer (usually electrical engineering, physics or math) speaks Saudi Arabic and/or English. A speech recognizer writes down what they say and often mishears math words. They addressed you by saying «نوتا». Work out what they meant and reply with ONLY one JSON object, no other text.',
+  '',
+  'Reply shape: {"actions": [1 to 3 actions], "say": "2 to 5 Arabic words for Nota\'s speech bubble"}',
+  'Actions:',
+  '- {"do": "math", "tex": "<LaTeX>"}: write one equation on the board.',
+  '- {"do": "fix", "tex": "<LaTeX>"}: replace the LAST equation on the board with this one.',
+  '- {"do": "command", "command": "<command>"}: run one of Nota\'s commands, written exactly in one of these Arabic forms:',
+  '  عنوان <text> | نقطة <text> | فاصل | جدول <col>، <col>، <col> | صف <cell>، <cell>، <cell> | امسح آخر صف | شارك <student name> | شارك <student name>: <note> | كم شارك <student name> | امسح آخر مشاركة | المشاركات | امسح آخر سطر | تراجع | كبر الخط | صغر الخط | الوضع الأسود | الوضع الأبيض | انزل | اطلع | صدر | وقف',
+  '- {"do": "text", "text": "<sentence>"}: write a plain sentence, only when they clearly asked you to write one.',
+  '- {"do": "none"}: you cannot tell what they want; put a short Arabic question in "say".',
+  'If they ask for an equation, a formula or a law in any wording, answer with a math action.',
+  '',
+  'Equation rules:',
+  '- KaTeX LaTeX without $ signs and without environments. Match the board\'s style: V = I R, X_{C} = \\frac{1}{2\\pi f C}, braces on every subscript and power, \\Omega for ohms, j for the imaginary unit, \\angle for phase, \\text{...} for words and units.',
+  '- Keep the letters and numbers they said. If they name a known law or quantity, write its standard textbook form with the usual symbols.',
+  '- One equation per math action: no explanations and no "where" lines.',
+  '',
+  'Common mishearings (what the recognizer wrote → what was meant):',
+  'في → V (or "times"/"in", by context) · اي → I · ار → R · سي → C · ال → L · اف → f · زد / زي → Z · اكس → x · واي → y · كيو → q · فيتا / سيتا / ثيتا → θ · اوميقا / اوميغا → ω · باي → π · فاي → φ · تاو → τ · دلتا → Δ · سيقما → σ or Σ · ميو → μ · لمدا → λ · الفا → α · بيتا → β · قاما / جاما → γ · ابسلون → ε · ايتا → η · رو → ρ · تربيع → ^{2} · تكعيب → ^{3} · اس / أس → power · على / مقسوم على → fraction · جذر → \\sqrt · تكامل → \\int · مجموع → \\sum · جا → \\sin · جتا → \\cos · ظا → \\tan · لوق → \\log · سب / صب / sub → subscript · زائد → + · ناقص → − · ضرب → product · يساوي / تساوي → =',
+  'Never send the commands «امسح الكل» or «محاضرة جديدة».'
+].join('\n');
+const AI_JOB = {
+  build: 'They asked you to build an equation. Write the equation they described, or the standard textbook form of the law or quantity they named.',
+  repair: 'They dictated an equation, but Nota\'s word-by-word converter did not know some of the words. Write the equation they meant.',
+  command: 'None of Nota\'s fixed commands matched these words. Work out which command or equation they meant.',
+  fix: 'They want the LAST equation on the board corrected. Answer with one "fix" action.'
+};
+function aiBoard() {
+  return doc.lines.slice(-6).map(l => {
+    if (l.type === 'math') return '- math: ' + l.tex + (l.src ? '   (said: «' + l.src + '»)' : '');
+    if (l.type === 'table') return '- table: ' + [l.head || [], ...(l.rows || []).slice(-3)].map(r => r.join(' | ')).join(' / ');
+    if (l.type === 'divider') return '- divider';
+    return '- ' + l.type + ': ' + String(l.text || '').slice(0, 160);
+  }).join('\n') || '(empty)';
+}
+function aiPrompt(job) {
+  const p = [AI_RULES, '', 'Lecture title: ' + (doc.title || '').slice(0, 80), 'Last lines on the board, oldest first:', aiBoard(), '', 'Job: ' + AI_JOB[job.kind]];
+  if (job.kind === 'fix') {
+    p.push('The last equation: ' + job.last.tex + (job.last.src ? '   (written from: «' + job.last.src + '»)' : ''));
+    p.push(job.said ? 'Their instruction: «' + job.said + '»' : 'No instruction: rebuild it from what they said, fixing misheard words.');
+  } else {
+    p.push('What they said: «' + job.said + '»');
+    if (job.kind === 'repair' && job.dict) p.push('Nota\'s word-by-word attempt: ' + job.dict);
+  }
+  return p.join('\n');
+}
+
+function aiTex(t) {
+  let s = String(t == null ? '' : t).trim().replace(/^\$+|\$+$/g, '').replace(/^\\\[|\\\]$/g, '').replace(/^\\\(|\\\)$/g, '').trim();
+  if (!s || s.length > 400) return '';
+  if (window.katex) { try { katex.renderToString(s, { throwOnError: true, strict: false, trust: false }); } catch (e) { return ''; } }
+  return s;
+}
+function lastMathIndex() { for (let i = doc.lines.length - 1; i >= 0; i--) if (doc.lines[i].type === 'math') return i; return -1; }
+function aiSay(out) { return out && typeof out.say === 'string' ? out.say.replace(/\s+/g, ' ').trim().slice(0, 40) : ''; }
+const AI_RISKY = /^(امسح\s*الكل|امسح\s*كل|امسح\s*السبوره|امسح\s*الشاشه|clear\s*all|محاضره\s*جديده|new\s*lecture)/i;
+/* carries out Claude's plan; 'done' | 'none' (Claude could not tell) | 'bad' (nothing usable came back) */
+function aiApply(out, job) {
+  const list = Array.isArray(out) ? out : out && Array.isArray(out.actions) ? out.actions : out && out.do ? [out] : [];
+  const say = aiSay(out);
+  let wrote = 0, ran = 0, none = false;
+  for (const a of list.filter(a => a && typeof a === 'object').slice(0, 3)) {
+    let d = String(a.do || '').toLowerCase();
+    if (job.kind === 'fix' && d === 'math') d = 'fix';
+    if (d === 'math' || (d === 'fix' && lastMathIndex() < 0)) {
+      const tex = aiTex(a.tex); if (!tex) continue;
+      addLine({ type: 'math', tex, src: job.said || null, ai: true }); wrote++;
+    } else if (d === 'fix') {
+      const tex = aiTex(a.tex), i = lastMathIndex(); if (!tex || i < 0) continue;
+      snapshot(); adopt();
+      doc.lines[i] = Object.assign({}, doc.lines[i], { tex, ai: true }); freshId = doc.lines[i].id;
+      commit(); showLine(doc.lines[i].id); wrote++;
+    } else if (d === 'command') {
+      const c = String(a.command || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+      const cmd = c.slice(textOffset(c, (NotaMath.norm(c).match(WAKE) || [''])[0].length)).trim();
+      if (!cmd || AI_RISKY.test(NotaMath.norm(cmd))) continue;
+      if (runCommand(cmd, true)) ran++;
+    } else if (d === 'text') {
+      const t = String(a.text || '').replace(/\s+/g, ' ').trim().slice(0, 300); if (!t) continue;
+      addLine({ type: 'text', text: t }); wrote++;
+    } else if (d === 'none') none = true;
+  }
+  if (wrote) setEmotion('happy', 1400, say || (job.kind === 'fix' ? 'صححت المعادلة' : 'كتبتها'));
+  return wrote || ran ? 'done' : none ? 'none' : 'bad';
+}
+function aiWaitLabel(kind) { return kind === 'fix' ? 'أصحح المعادلة…' : kind === 'command' ? 'أفكر وش تقصد…' : 'أبني المعادلة…'; }
+function aiAsk(job) {
+  if (!aiReady()) { aiOff(job); return; }
+  AI.waiting++; $('#ai-wait-t').textContent = aiWaitLabel(job.kind); paintLive();
+  setEmotion('thinking', 30000, aiWaitLabel(job.kind));
+  AI.queue = AI.queue.then(() => aiRun(job));
+}
+async function aiRun(job) {
+  $('#ai-wait-t').textContent = aiWaitLabel(job.kind);
+  try {
+    const out = await aiCall(aiPrompt(job));
+    if (AI.state === 'prompt') { AI.state = 'granted'; paintAI(); }
+    const res = aiApply(out, job);
+    if (res === 'none') { if (job.kind === 'repair' && job.fallback) job.fallback(); else setEmotion('confused', 2600, aiSay(out) || 'ما فهمت قصدك، قلها بطريقة ثانية'); }
+    else if (res === 'bad') aiFallback(job, 'ما قدرت أفهمها');
+  } catch (e) {
+    aiError(e, job);
+  } finally {
+    AI.waiting = Math.max(0, AI.waiting - 1); paintLive();
+    if (orb.cur === 'thinking' && !AI.waiting) { setEmotion('attentive', 900); $('#bubble').classList.remove('show'); }
+  }
+}
+function aiFallback(job, why) {
+  if (why) toast(why);
+  if (job.fallback) job.fallback(); else setEmotion('confused', 2400, why || 'ما قدرت');
+}
+function aiError(e, job) {
+  const code = e && e.code;
+  if (code === 'cancelled') return;
+  if (code === 'not_granted' || code === 'sampling_disabled' || code === 'not_declared' || code === 'capability_disabled' || code === 'capability_removed') {
+    AI.state = 'denied'; paintAI();
+    aiFallback(job, code === 'not_granted' ? 'ما سمحت للمساعد، فاستخدمت القاموس' : 'المساعد مو متاح هنا، فاستخدمت القاموس');
+    return;
+  }
+  aiFallback(job, code === 'rate_limited' ? 'المساعد مشغول الحين، جرّب بعد شوي' : 'ما قدرت أوصل للمساعد');
+}
+/* no assistant here (the GitHub site, or switched off): do the best Nota can on its own, and say why once */
+function aiOff(job) {
+  if (opts.ai && !AI.told) { AI.told = true; toast(AI.state === 'denied' ? 'المساعد مقفول، فاستخدمت القاموس' : 'المساعد الذكي يشتغل في رابط نوتا على Claude. هنا استخدمت القاموس'); }
+  if (job.fallback) job.fallback(); else setEmotion('confused', 2200, 'هذا يحتاج المساعد الذكي');
+}
+
+/* «نوتا سو معادلة …»: a known law straight from the templates, anything else from the assistant */
+function tplKey(s) { return NotaMath.norm(String(s || '')).replace(/[.,!؟?:]/g, ' ').replace(/^(قانون|معادله|law\s*of|law)\s+/, '').replace(/(^|\s)ال/g, '$1').replace(/\s+/g, ' ').trim(); }
+function tplFind(desc) { const k = tplKey(desc); return k ? TPLS.find(([name]) => tplKey(name) === k) : null; }
+function buildEq(desc) {
+  desc = String(desc || '').trim();
+  if (!desc) { pendingBuild = true; setEmotion('attentive', 3000, 'وش المعادلة؟'); return; }
+  const t = tplFind(desc);
+  if (t) { thinkThen(() => { addLine({ type: 'math', tex: t[1], src: t[0] }); setEmotion('happy', 1100, 'كتبت ' + t[0]); }); return; }
+  aiAsk({ kind: 'build', said: desc, fallback: () => {
+    // without the assistant, only write it when the dictionary understood most of it
+    const r = NotaMath.toLatex(desc);
+    if (r.tex && r.atoms + r.structs > r.words) addMath(desc, true, true); else setEmotion('confused', 2400, 'ما أعرف هذي بدون المساعد');
+  } });
+}
+/* «نوتا صحح المعادلة» / «نوتا عدّل المعادلة خل الأس ثلاثة» */
+function fixEq(instr) {
+  const i = lastMathIndex();
+  if (i < 0) { setEmotion('confused', 1800, 'ما فيه معادلة أصححها'); return; }
+  aiAsk({ kind: 'fix', said: String(instr || '').trim(), last: doc.lines[i] });
+}
+
+function paintAI() {
+  const note = $('#ai-note'), btn = $('#ai-allow');
+  let t, b = '';
+  if (!opts.ai) t = 'مطفي. نوتا يكمل بالقاموس والقوالب.';
+  else if (typeof AI.sample !== 'function') t = 'يشتغل في رابط نوتا على Claude. هنا يكمل نوتا بالقاموس والقوالب.';
+  else if (AI.state === 'denied') { t = 'ما سمحت له. ترجّعه من قائمة الأذونات.'; b = AI.perms ? 'افتح الأذونات' : ''; }
+  else if (AI.state === 'granted') t = 'جاهز. قل «نوتا سو معادلة …» أو «نوتا صحح المعادلة».';
+  else { t = 'أول مرة بيطلب إذن Claude. اسمح له الحين عشان ما يطلع السؤال وسط المحاضرة.'; b = AI.perms ? 'اسمح للمساعد الحين' : ''; }
+  note.textContent = t; btn.textContent = b; btn.hidden = !b;
+  $('#ai-help-where').textContent = typeof AI.sample === 'function' ? '' : 'في رابط Claude';
+}
+function aiPermState() {
+  if (!AI.perms || typeof AI.sample !== 'function') { paintAI(); return; }
+  AI.perms.state('sample').then(s => { if (s === 'granted' || s === 'denied') AI.state = s; else if (AI.state === 'none') AI.state = 'prompt'; paintAI(); }).catch(() => paintAI());
+}
+$('#opt-ai').addEventListener('change', e => { opts.ai = e.target.checked; saveSettings(); paintAI(); });
+$('#ai-allow').addEventListener('click', () => {
+  if (!AI.perms) return;
+  if (AI.state === 'denied') { AI.perms.manage().then(aiPermState).catch(() => toast('افتح قائمة الأذونات من فوق')); return; }
+  AI.perms.request(['sample']).then(r => { const s = r && r.sample; if (s === 'granted' || s === 'denied') AI.state = s; paintAI(); if (s === 'granted') setEmotion('excited', 1400, 'المساعد جاهز!'); }).catch(() => {});
+});
+
 /* the words being said right now, under the newest line */
 let lastFinal = '';
 let hintT = 0;
@@ -2221,6 +2438,7 @@ function paintLive() {
   const w = $('#live-words'), lv = $('#live'), was = liveIsOn(lv);
   lv.classList.toggle('on', !!ghostText);
   lv.classList.toggle('listening', listening && !ghostText);
+  lv.classList.toggle('ai', AI.waiting > 0 && !ghostText);
   if (ghostText) {
     // words are coming: show them at once, the hint fades out in the same place
     clearTimeout(hintT); hintT = 0;
@@ -2552,6 +2770,13 @@ function helpButtons(box, list, code) {
 }
 helpButtons($('#examples'), EXAMPLES, true);
 helpButtons($('#commands'), CMD_HELP, false);
+helpButtons($('#ai-examples'), [
+  ['نوتا سو معادلة قانون كولوم', 'يبني القانون كامل'],
+  ['نوتا سو معادلة فيتا تساوي اوميقا تي', 'يفهم الكلمات اللي انكتبت غلط'],
+  ['نوتا حط لي عنوان المكثفات', 'يفهم الأمر لو قلته بطريقتك'],
+  ['نوتا صحح المعادلة', 'يعيد بناء آخر معادلة من كلامك'],
+  ['نوتا عدّل المعادلة خل الأس ثلاثة', 'يعدّل آخر معادلة']
+], false);
 
 /* full screen */
 $('#btn-fs').addEventListener('click', () => {
@@ -2671,8 +2896,8 @@ function fallbackCopy(t, done) {
 }
 
 /* ============================ Boot ============================ */
-opts.blink = settings.blink; opts.follow = settings.follow; opts.autoMath = settings.autoMath; opts.use3d = settings.use3d; opts.fly = settings.fly !== false;
-$('#opt-blink').checked = opts.blink; $('#opt-follow').checked = opts.follow; $('#opt-math').checked = opts.autoMath; $('#opt-3d').checked = opts.use3d; $('#opt-fly').checked = opts.fly;
+opts.blink = settings.blink; opts.follow = settings.follow; opts.autoMath = settings.autoMath; opts.use3d = settings.use3d; opts.fly = settings.fly !== false; opts.ai = settings.ai !== false;
+$('#opt-blink').checked = opts.blink; $('#opt-follow').checked = opts.follow; $('#opt-math').checked = opts.autoMath; $('#opt-3d').checked = opts.use3d; $('#opt-fly').checked = opts.fly; $('#opt-ai').checked = opts.ai;
 resize3D();
 const savedTheme = store.get('theme');
 applyTheme(savedTheme === 'dark' || savedTheme === 'light' ? savedTheme : systemTheme(), false);
@@ -2680,7 +2905,7 @@ if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListen
 new MutationObserver(() => { if (!store.get('theme')) applyTheme(systemTheme(), false); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 const savedLang = store.get('lang'); if (savedLang === 'en') setLang('en');
 applyFonts(); setSize(settings.size);
-render(); paintLive(); paintMood();
+render(); paintLive(); paintMood(); paintAI();
 followLatest(true);
 init3D().then(() => { resize3D(); syncCanvases(); requestAnimationFrame(frame); });
 setTimeout(() => setEmotion('happy', 1800, 'هلا! أنا نوتا، جاهز للمحاضرة'), 700);
@@ -2705,11 +2930,13 @@ if (window.claude && typeof window.claude.use === 'function') {
     } else if (!SR) { mic.disabled = true; micLabel.textContent = 'الكلام غير متاح هنا. اكتب تحت'; }
   }).catch(() => {});
   window.claude.use('downloads').then(d => { downloads = d; }).catch(() => {});
+  window.claude.use('sample').then(s => { if (typeof s === 'function') { AI.sample = s; AI.state = 'prompt'; } aiPermState(); }).catch(() => {});
+  window.claude.use('permissions').then(p => { AI.perms = p || null; aiPermState(); }).catch(() => {});
 } else if (!SR) {
   mic.disabled = true; micLabel.textContent = 'المتصفح ما يدعم الكلام. استخدم Chrome';
 }
 
-window.__nota = { addPart, partGroups, newTable, addRow, toMarkdown, partsCSV, handleUtterance, setEmotion, applyTheme, onPartial, onFinal, setListening, followLatest, get doc() { return doc; }, get n3() { return N3.ok; }, fly, N3, opts, live, orb, relayout, placeHalo, paintLive, addLine, LOOK, applyLook, makeEnv };
+window.__nota = { AI, aiPrompt, runCommand, addPart, partGroups, newTable, addRow, toMarkdown, partsCSV, handleUtterance, setEmotion, applyTheme, onPartial, onFinal, setListening, followLatest, get doc() { return doc; }, get n3() { return N3.ok; }, fly, N3, opts, live, orb, relayout, placeHalo, paintLive, addLine, LOOK, applyLook, makeEnv };
 })();
 </script>
 
